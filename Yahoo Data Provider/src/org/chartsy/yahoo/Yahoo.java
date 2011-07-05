@@ -44,6 +44,12 @@ public class Yahoo extends DataProvider
         return 5;
     }
 
+    @Override
+    public Interval[] getSupportedIntervals()
+    {
+        return INTERVALS;
+    }
+
 	@Override
 	protected String fetchCompanyName(String symbol)
 		throws InvalidStockException, StockNotFoundException, RegistrationException, IOException

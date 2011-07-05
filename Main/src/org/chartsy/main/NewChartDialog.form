@@ -29,7 +29,7 @@
               <EmptySpace max="-2" attributes="0"/>
               <Group type="103" groupAlignment="0" attributes="0">
                   <Group type="102" alignment="0" attributes="0">
-                      <Component id="msgLabel" pref="489" max="32767" attributes="0"/>
+                      <Component id="msgLabel" pref="505" max="32767" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
                   </Group>
                   <Group type="102" alignment="0" attributes="0">
@@ -68,7 +68,7 @@
           <Group type="103" rootIndex="1" groupAlignment="0" attributes="0">
               <Group type="102" alignment="0" attributes="0">
                   <EmptySpace max="-2" attributes="0"/>
-                  <Component id="lblLogo" pref="489" max="32767" attributes="0"/>
+                  <Component id="lblLogo" pref="505" max="32767" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
               </Group>
           </Group>
@@ -109,7 +109,7 @@
           <Group type="103" rootIndex="1" groupAlignment="0" attributes="0">
               <Group type="102" alignment="0" attributes="0">
                   <EmptySpace min="-2" pref="11" max="-2" attributes="0"/>
-                  <Component id="lblLogo" pref="132" max="32767" attributes="0"/>
+                  <Component id="lblLogo" pref="258" max="32767" attributes="0"/>
                   <EmptySpace min="-2" pref="159" max="-2" attributes="0"/>
               </Group>
           </Group>

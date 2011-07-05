@@ -10,7 +10,6 @@ import java.awt.event.MouseEvent;
 import java.io.Serializable;
 import java.util.prefs.PreferenceChangeEvent;
 import java.util.prefs.PreferenceChangeListener;
-import java.util.prefs.Preferences;
 import javax.swing.Action;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -22,7 +21,6 @@ import javax.swing.SwingConstants;
 import javax.swing.border.AbstractBorder;
 import org.chartsy.main.utils.MainActions;
 import org.chartsy.main.utils.SerialVersion;
-import org.openide.util.NbPreferences;
 
 /**
  *
@@ -35,7 +33,6 @@ public class ChartToolbar extends JToolBar implements Serializable, PreferenceCh
 
     private ChartFrame chartFrame;
     private SymbolChanger symbolChanger;
-	private Preferences chatPreferences = NbPreferences.root().node("/org/chartsy/chat");
 
     public ChartToolbar(ChartFrame frame)
     {
@@ -46,7 +43,6 @@ public class ChartToolbar extends JToolBar implements Serializable, PreferenceCh
 	setDoubleBuffered(true);
         setBorder(new BottomBorder());
         addMouseListener(new ToolbarOptions(this));
-	chatPreferences.addPreferenceChangeListener((PreferenceChangeListener) this);
     }
 
     private void initComponents()
@@ -67,7 +63,6 @@ public class ChartToolbar extends JToolBar implements Serializable, PreferenceCh
         add(exportBtn = ToolbarButton.getButton(MainActions.exportImage(chartFrame)));
         add(printBtn = ToolbarButton.getButton(MainActions.printChart(chartFrame)));
         add(propertiesBtn = ToolbarButton.getButton(MainActions.chartProperties(chartFrame)));
-	add(joinConference = ToolbarButton.getButton(MainActions.joinToConference(chartFrame)));
         add(postFacebook = ToolbarButton.getButton(MainActions.postOnFacebook(chartFrame)));
         add(postTwitter = ToolbarButton.getButton(MainActions.postOnTwitter(chartFrame)));
 
@@ -75,25 +70,11 @@ public class ChartToolbar extends JToolBar implements Serializable, PreferenceCh
         postTwitter.setButtonWidth(50);
 
 	markerBtn.setSelected(true);
-	joinConference.setVisible(chatPreferences.getBoolean("loggedin", false));
     }
 
     public void updateToolbar()
     {
 	symbolChanger.updateToolbar();
-    }
-
-    public void isLoggedInChat()
-    {
-        if (chatPreferences.getBoolean("loggedin", false))
-        {
-            if (!joinConference.isVisible())
-                joinConference.setVisible(true);
-        } else
-        {
-            if (joinConference.isVisible())
-                joinConference.setVisible(false);
-        }
     }
 
     public void toggleLabels()
@@ -110,7 +91,6 @@ public class ChartToolbar extends JToolBar implements Serializable, PreferenceCh
         exportBtn.toggleLabel(show);
         printBtn.toggleLabel(show);
         propertiesBtn.toggleLabel(show);
-        joinConference.toggleLabel(show);
         postFacebook.toggleLabel(show);
         postTwitter.toggleLabel(show);
         revalidate();
@@ -131,7 +111,6 @@ public class ChartToolbar extends JToolBar implements Serializable, PreferenceCh
         exportBtn.toggleIcon(small);
         printBtn.toggleIcon(small);
         propertiesBtn.toggleIcon(small);
-        joinConference.toggleIcon(small);
         postFacebook.toggleIcon(small);
         postTwitter.toggleIcon(small);
         revalidate();
@@ -160,8 +139,6 @@ public class ChartToolbar extends JToolBar implements Serializable, PreferenceCh
     @Override
     public void preferenceChange(PreferenceChangeEvent evt)
     {
-        if (evt.getKey().equals("loggedin"))
-            joinConference.setVisible(evt.getNode().getBoolean("loggedin", false));
     }
 
     public static class ToolbarOptions extends MouseAdapter
@@ -335,7 +312,6 @@ public class ChartToolbar extends JToolBar implements Serializable, PreferenceCh
     private ToolbarButton exportBtn;
     private ToolbarButton printBtn;
     private ToolbarButton propertiesBtn;
-    private ToolbarButton joinConference;
     private ToolbarButton postFacebook;
     private ToolbarButton postTwitter;
 

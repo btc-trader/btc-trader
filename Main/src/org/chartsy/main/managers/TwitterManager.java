@@ -15,11 +15,13 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
 import javax.swing.border.TitledBorder;
-import org.chartsy.chatsy.chat.util.log.NotifyUtil;
 import org.chartsy.main.ChartFrame;
 import org.chartsy.main.utils.ImageExporter;
+import org.chartsy.main.utils.NotifyUtil;
 import org.netbeans.api.progress.ProgressHandle;
 import org.netbeans.api.progress.ProgressHandleFactory;
+import org.openide.DialogDisplayer;
+import org.openide.NotifyDescriptor;
 import org.openide.util.NbPreferences;
 import org.openide.windows.WindowManager;
 
@@ -59,7 +61,13 @@ public final class TwitterManager
     public void publishChart(final ChartFrame chartFrame, final String caption)
     {
         if (user.isEmpty() || pass.isEmpty()) {
-            NotifyUtil.warn("Acount Data", "You need to specify and account username and password.", false);
+            NotifyDescriptor descriptor = new NotifyDescriptor.Message(
+                    "You need to specify and account username and password.",
+                    NotifyDescriptor.ERROR_MESSAGE
+                );
+
+            DialogDisplayer.getDefault().notify(descriptor);
+
             return;
         }
         
@@ -91,13 +99,29 @@ public final class TwitterManager
                         response = twitPic.uploadAndPost(file, text);
                     }
                 } catch (TwitPicException tpex) {
-                    NotifyUtil.error("Upload Error", tpex.getMessage(), tpex, false);
+                    NotifyDescriptor descriptor = new NotifyDescriptor.Message(
+                            tpex.getMessage(),
+                            NotifyDescriptor.ERROR_MESSAGE
+                        );
+
+                    DialogDisplayer.getDefault().notify(descriptor);
+
                 } catch (IOException ioex) {
-                    NotifyUtil.error("Upload Error", ioex.getMessage(), ioex, false);
+                    NotifyDescriptor descriptor = new NotifyDescriptor.Message(
+                            ioex.getMessage(),
+                            NotifyDescriptor.ERROR_MESSAGE
+                        );
+
+                    DialogDisplayer.getDefault().notify(descriptor);
                 }
 
                 if (response != null) {
-                    NotifyUtil.info("Upload Done", "File uploaded successfully.", false);
+                    NotifyDescriptor descriptor = new NotifyDescriptor.Message(
+                            "File uploaded successfully.",
+                            NotifyDescriptor.ERROR_MESSAGE
+                        );
+
+                    DialogDisplayer.getDefault().notify(descriptor);
                 }
 
                 handle.finish();

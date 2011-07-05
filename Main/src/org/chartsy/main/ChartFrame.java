@@ -353,18 +353,14 @@ public class ChartFrame extends TopComponent
 			popupMenu.add(new JMenuItem(MainActions.exportImage(this))); // export image
 			popupMenu.add(new JMenuItem(MainActions.printChart(this))); // print
 			popupMenu.add(new JMenuItem(MainActions.chartProperties(this))); // chart settings
-			popupMenu.add(new JMenuItem(MainActions.joinToConference(this))); // join to symbol conference
 			popupMenu.add(new JMenuItem(MainActions.addToFavorites(this))); // add to favorites
 			popupMenu.add(new JMenuItem(MainActions.toggleToolbarVisibility(this))); // hide/show toolbar
 			popupMenu.add(MainActions.generateTemplatesMenu(this)); // save to template
 
 			popupMenu.getComponent(8).setVisible(false);
-			popupMenu.getComponent(9).setVisible(false);
 		}
-		if (NbPreferences.root().node("/org/chartsy/chat").getBoolean("loggedin", false))
-			popupMenu.getComponent(8).setVisible(true);
 		if (!MainActions.isInFavorites(this))
-			popupMenu.getComponent(9).setVisible(true);
+			popupMenu.getComponent(8).setVisible(true);
         return popupMenu;
     }
 
@@ -425,9 +421,7 @@ public class ChartFrame extends TopComponent
     @Override
     protected void componentActivated()
     {
-		super.componentActivated();
-		if (chartToolbar != null)
-			chartToolbar.isLoggedInChat();
+        super.componentActivated();
         componentFocused();
     }
 

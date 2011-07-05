@@ -27,9 +27,7 @@
                 <attr name="noIconInMenu" boolvalue="false"/>
             </file>
         </folder>
-        <folder name="Help">
-            <file name="org-chartsy-main-Register.instance"/>
-        </folder>
+        <folder name="Help"/>
     </folder>
     <folder name="Shortcuts">
         <file name="D-N.shadow">
@@ -100,10 +98,6 @@
         <file name="GoTo_hidden"/>
         <folder name="Help">
             <file name="netbeans-kb.url_hidden"/>
-            <file name="org-chartsy-main-Register.shadow">
-                <attr name="originalFile" stringvalue="Actions/Help/org-chartsy-main-Register.instance"/>
-                <attr name="position" intvalue="100"/>
-            </file>
             <file name="org-netbeans-modules-bugzilla-ReportNBIssueAction.shadow_hidden"/>
             <file name="org-netbeans-modules-usersguide-master.xml_hidden"/>
             <file name="shortcuts.xml_hidden"/>
@@ -142,6 +136,10 @@
             <file name="org-openide-actions-ToolsAction.shadow_hidden">
                 <attr name="position" intvalue="1300"/>
             </file>
+        </folder>
+        <folder name="Versioning">
+            <file name="org-netbeans-modules-hudson-ui-actions-CreateJob.shadow_hidden"/>
+            <file name="org-netbeans-modules-versioning-VersioningMainMenu.instance_hidden"/>
         </folder>
         <folder name="View">
             <file name="Separator1.instance_hidden"/>
@@ -188,9 +186,6 @@
             <file name="org-chartsy-main-NewChart.shadow">
                 <attr name="originalFile" stringvalue="Actions/File/org-chartsy-main-NewChart.instance"/>
                 <attr name="position" intvalue="0"/>
-            </file>
-            <file name="org-chartsy-main-features-FeatureAction.instance">
-                <attr name="position" intvalue="400"/>
             </file>
             <file name="org-netbeans-modules-project-ui-NewFile.shadow_hidden"/>
             <file name="org-netbeans-modules-project-ui-NewProject.shadow_hidden"/>

@@ -2,7 +2,6 @@ package org.chartsy.main;
 
 import java.awt.Color;
 import java.awt.Cursor;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import javax.swing.JComboBox;
@@ -15,7 +14,6 @@ import org.chartsy.main.templates.Template;
 import org.chartsy.main.utils.DesktopUtil;
 import org.chartsy.main.utils.UppercaseDocumentFilter;
 import org.chartsy.main.utils.autocomplete.StockAutoCompleter;
-import org.openide.util.Exceptions;
 import org.openide.windows.WindowManager;
 
 public class NewChartDialog extends javax.swing.JDialog
@@ -45,16 +43,22 @@ public class NewChartDialog extends javax.swing.JDialog
 		msgLabel.setVisible(false);
 		msgLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        dataProvider = DataProviderManager.getDefault().getDataProvider(defaultDataProvider).getName();
         List<String> dataProviders = DataProviderManager.getDefault().getDataProviders();
         Collections.sort(dataProviders);
+
+        if ( dataProviders.size() > 0 ) {
+            dataProvider = dataProviders.contains(defaultDataProvider)
+                         ? defaultDataProvider : dataProviders.get(0);
+        }
 
         lstDataProvider.setMaximumRowCount(dataProviders.size());
         for (String s : dataProviders)
         {
             lstDataProvider.addItem(s);
         }
-        lstDataProvider.setSelectedItem(defaultDataProvider);
+
+        if ( dataProvider != null )
+            lstDataProvider.setSelectedItem(dataProvider);
 
         Object[] templates = TemplateManager.getDefault().getTemplateNames();
         for (Object temp : templates)

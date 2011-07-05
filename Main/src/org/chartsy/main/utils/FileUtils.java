@@ -200,19 +200,6 @@ public final class FileUtils {
 		return new File(result);
 	}
 
-	public static String stockScanFolder()
-	{
-		String result = LocalFolder() + File.separator + "StockScanPRO";
-		createFolder(result);
-		return result;
-	}
-
-	public static File stockScanFile(String fileName)
-	{
-		String result = stockScanFolder() + File.separator + fileName;
-		return new File(result);
-	}
-
 	public static String templatesFolder()
 	{
 		String result = LocalFolder() + File.separator + "templates";

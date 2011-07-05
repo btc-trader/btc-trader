@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.prefs.Preferences;
-import javax.swing.JFrame;
 import org.chartsy.main.managers.AnnotationManager;
 import org.chartsy.main.managers.ChartManager;
 import org.chartsy.main.managers.DataProviderManager;
@@ -44,14 +43,6 @@ public class Installer extends ModuleInstall implements Runnable
 		
 		addKeystore();
 		setPrintProperties();
-
-		boolean registred = chartsyPreferences.getBoolean("registred", false);
-		if (!registred)
-		{
-			RegisterForm register = new RegisterForm(new JFrame(), true);
-			register.setLocationRelativeTo(WindowManager.getDefault().getMainWindow());
-			register.setVisible(true);
-		}
 	}
 
     public @Override void restored()
