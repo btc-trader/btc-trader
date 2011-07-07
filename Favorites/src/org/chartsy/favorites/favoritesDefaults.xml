@@ -1,63 +1,63 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <favorites>
-    <stock>
-        <companyName>S&amp;P 100 INDEX</companyName>
-        <symbol>^OEX</symbol>
-        <exchange></exchange>
-        <dataProvider>Yahoo</dataProvider>
-    </stock>
-    <stock>
-        <companyName>Apple Inc.</companyName>
-        <symbol>AAPL</symbol>
-        <exchange></exchange>
-        <dataProvider>Yahoo</dataProvider>
-    </stock>
-    <stock>
-        <companyName>American International Group, I</companyName>
-        <symbol>AIG</symbol>
-        <exchange></exchange>
-        <dataProvider>Yahoo</dataProvider>
-    </stock>
-    <stock>
-        <companyName>Deutsche Bank AG Common Stock</companyName>
-        <symbol>DB</symbol>
-        <exchange></exchange>
-        <dataProvider>Yahoo</dataProvider>
-    </stock>
-    <stock>
-        <companyName>Google Inc.</companyName>
-        <symbol>GOOG</symbol>
-        <exchange></exchange>
-        <dataProvider>Yahoo</dataProvider>
-    </stock>
-    <stock>
-        <companyName>International Business Machines</companyName>
-        <symbol>IBM</symbol>
-        <exchange></exchange>
-        <dataProvider>Yahoo</dataProvider>
-    </stock>
-    <stock>
-        <companyName>Intuitive Surgical, Inc.</companyName>
-        <symbol>ISRG</symbol>
-        <exchange></exchange>
-        <dataProvider>Yahoo</dataProvider>
-    </stock>
-    <stock>
-        <companyName>Microsoft Corporation</companyName>
-        <symbol>MSFT</symbol>
-        <exchange></exchange>
-        <dataProvider>Yahoo</dataProvider>
-    </stock>
-    <stock>
-        <companyName>PowerShares Exchange-Traded Fun</companyName>
-        <symbol>QQQQ</symbol>
-        <exchange></exchange>
-        <dataProvider>Yahoo</dataProvider>
-    </stock>
-    <stock>
-        <companyName>United States Oil Fund, LP ETF</companyName>
-        <symbol>USO</symbol>
-        <exchange></exchange>
-        <dataProvider>Yahoo</dataProvider>
-    </stock>
+	<folder>
+		<name>Forex</name>
+		<stock>
+			<companyName>EUR%2FUSD</companyName>
+			<symbol>EURUSD%3DX</symbol>
+			<exchange></exchange>
+			<dataProvider>Yahoo</dataProvider>
+		</stock>
+		<stock>
+			<companyName>PLN%2FUSD</companyName>
+			<symbol>PLNUSD%3DX</symbol>
+			<exchange></exchange>
+			<dataProvider>Yahoo</dataProvider>
+		</stock>
+	</folder>
+	<folder>
+		<name>Bitcoin</name>
+        <stock>
+            <companyName>MTGOXUSD</companyName>
+            <symbol>MTGOXUSD</symbol>
+            <exchange></exchange>
+            <dataProvider>BitcoinCharts</dataProvider>
+        </stock>
+        <stock>
+            <companyName>THUSD</companyName>
+            <symbol>THUSD</symbol>
+            <exchange></exchange>
+            <dataProvider>BitcoinCharts</dataProvider>
+        </stock>
+		<stock>
+			<companyName>BITMARKETEUR</companyName>
+			<symbol>BITMARKETEUR</symbol>
+			<exchange></exchange>
+			<dataProvider>BitcoinCharts</dataProvider>
+		</stock>
+        <stock>
+            <companyName>BITOMATPLN</companyName>
+            <symbol>BITOMATPLN</symbol>
+            <exchange></exchange>
+            <dataProvider>BitcoinCharts</dataProvider>
+        </stock>
+        <stock>
+            <companyName>BRITCOINGBP</companyName>
+            <symbol>BRITCOINGBP</symbol>
+            <exchange></exchange>
+            <dataProvider>BitcoinCharts</dataProvider>
+        </stock>
+        <stock>
+            <companyName>VIRTEXCAD</companyName>
+            <symbol>VIRTEXCAD</symbol>
+            <exchange></exchange>
+            <dataProvider>BitcoinCharts</dataProvider>
+        </stock>
+        <stock>
+            <companyName>VIRWOXSLL</companyName>
+            <symbol>VIRWOXSLL</symbol>
+            <exchange></exchange>
+            <dataProvider>BitcoinCharts</dataProvider>
+        </stock>
+    </folder>
 </favorites>

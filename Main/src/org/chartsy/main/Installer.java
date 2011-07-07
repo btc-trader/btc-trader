@@ -1,10 +1,6 @@
 package org.chartsy.main;
 
 import java.beans.PropertyEditorManager;
-import java.io.File;
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 import org.chartsy.main.managers.AnnotationManager;
 import org.chartsy.main.managers.ChartManager;
@@ -17,13 +13,10 @@ import org.chartsy.main.managers.StockManager;
 import org.chartsy.main.managers.TemplateManager;
 import org.chartsy.main.managers.TwitterManager;
 import org.chartsy.main.utils.AlphaPropertyEditor;
-import org.chartsy.main.utils.FileUtils;
 import org.chartsy.main.utils.PricePropertyEditor;
 import org.chartsy.main.utils.StrokePropertyEditor;
 import org.openide.DialogDisplayer;
 import org.openide.NotifyDescriptor;
-import org.openide.filesystems.FileUtil;
-import org.openide.filesystems.Repository;
 import org.openide.modules.ModuleInstall;
 import org.openide.util.NbPreferences;
 import org.openide.windows.WindowManager;
@@ -33,15 +26,11 @@ public class Installer extends ModuleInstall implements Runnable
 
 	private Preferences chartsyPreferences = NbPreferences.root().node("/org/chartsy/register");
 	private Preferences printPreferences = NbPreferences.root().node("/org/netbeans/modules/print");
-	private Preferences autoUpdatePreferences = NbPreferences.root().node("/org/netbeans/modules/autoupdate");
-    private static final Logger LOG = Logger.getLogger(Installer.class.getName());
 
 	@Override public void run()
 	{
 		System.setProperty("sun.java2d.opengl", "true");
 		System.setProperty("sun.java2d.d3d", "false");
-		
-		addKeystore();
 		setPrintProperties();
 	}
 
@@ -76,55 +65,6 @@ public class Installer extends ModuleInstall implements Runnable
             return true; 
         else
             return false;
-    }
-
-    private File getChacheDirectory()
-    {
-        File cacheDir = null;
-        String userDir = System.getProperty("netbeans.user");
-        
-        if (userDir != null)
-        {
-            cacheDir = new File(new File(new File(userDir, "var"), "cache"), "catalogcache");
-        } 
-        else
-        {
-            @SuppressWarnings({"deprecation"})
-            File dir = FileUtil.toFile(Repository.getDefault().getDefaultFileSystem().getRoot());
-            cacheDir = new File(dir, "cachecatalog");
-        }
-        
-        cacheDir.mkdirs();
-        return cacheDir;
-    }
-
-    private File getSrcFile()
-    { return new File(new File(new File(new File(
-		  System.getProperty("netbeans.home"))
-		  .getParentFile(), "chartsy"), "core"), "user.ks");
-    }
-
-    private File getDestFile()
-    { return new File(getChacheDirectory(), "user.ks"); }
-
-    private void addKeystore()
-    {
-		try
-		{
-			if (!chartsyPreferences.getBoolean("ks.init", false)
-				&& getSrcFile().exists())
-			{
-				FileUtils.copyFile(getSrcFile(), getDestFile());
-				autoUpdatePreferences.put("userKS", "user.ks");
-				autoUpdatePreferences.put("period", "1");
-				chartsyPreferences.putBoolean("ks.init", true);
-			}
-		}
-		catch (IOException ex)
-		{
-			LOG.log(Level.INFO, "", ex);
-			chartsyPreferences.putBoolean("ks.init", false);
-		}
     }
 
     private void setPrintProperties()

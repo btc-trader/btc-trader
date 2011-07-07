@@ -6,6 +6,5 @@
 
 <tc-ref version="2.0" id="Welcome">
     <module name="org.chartsy.main" />
-    <tc-id id="Welcome" />
     <state opened="true" />
 </tc-ref>

@@ -2,9 +2,10 @@
 <!-- You may freely edit this file. See harness/README in the NetBeans platform -->
 <!-- for some information on what you could do (e.g. targets to override). -->
 <!-- If you delete this file and reopen the project it will be recreated. -->
-<project name="Chartsy" basedir=".">
-    <description>Builds the module suite Chartsy.</description>
+<project name="BTC Trader" basedir=".">
     <import file="nbproject/build-impl.xml"/>
+
+    <description>Builds the module suite ${app.title}.</description>
 
     <condition property="isWindows">
         <os family="windows" />
@@ -27,7 +28,6 @@
 
         <delete file="${nbdist-resources.dir}/${app.name}.icns"/>
         <copy tofile="${nbdist-resources.dir}/${app.name}.icns" file="${app.name}.icns"/>
-        <copy tofile="${nbdist-resources.dir}/${app.name}/${app.name}/core/user.ks" file="user.ks" />
     </target>
 
     <target name="build" depends="build-brand,suite.build"/>
@@ -51,27 +51,6 @@
             comment="Updated by build script">
             <entry key="LBL_ProductInformation" value="${app.title}"/>
         </propertyfile>
-    </target>
-
-    <target name="build-zip" depends="suite.build-zip">
-        <property name="nbdist.dir" value="dist"/>
-        <property name="release.dir" value="${nbdist.dir}/${app.name}"/>
-
-        <unzip src="${nbdist.dir}/${app.name}.zip" dest="${nbdist.dir}"/>
-        <!--<delete file="${nbdist.dir}/${app.name}.zip" />-->
-
-        <copy tofile="${nbdist.dir}/${app.name}/${app.name}/core/user.ks" file="user.ks"/>
-        <copy tofile="${nbdist.dir}/${app.name}/bin/chartsy.png" file="chartsy.png"/>
-
-        <zip destfile="${nbdist.dir}/${app.name}-installer.zip">
-            <zipfileset dir="${nbdist.dir}/${app.name}" />
-        </zip>
-
-        <zip destfile="${nbdist.dir}/${app.name}-test.zip">
-            <zipfileset dir="${nbdist.dir}/${app.name}" prefix="${app.name}" />
-        </zip>
-        
-        <delete dir="${nbdist.dir}/${app.name}" />
     </target>
 
 </project>

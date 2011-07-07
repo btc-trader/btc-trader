@@ -19,10 +19,17 @@ public final class FileUtils {
 
     protected FileUtils() {}
 
-    public static String LocalFolder() {
-        String result = System.getProperty("user.home") + File.separator + "Chartsy";
-        createFolder(result);
-        return result;
+    // Copy-pasted from netpeans platform sources:
+    // org.netbeans.modules.autoupdate.services.Utilities
+    public static String LocalFolder()
+    {
+        String dir = System.getProperty ("netbeans.user"); // NOI18N
+        if ( dir == null )
+            dir = FileUtil.toFile(FileUtil.getConfigRoot()).toString();
+
+        createFolder(dir);
+
+        return dir;
     }
 
     public static String LogFolder() {
@@ -179,20 +186,6 @@ public final class FileUtils {
         createFolder(result);
         return result;
     }
-
-    /*public static String favoritesFolder()
-    {
-        String result = LocalFolder() + File.separator + "favorites";
-        createFolder(result);
-        return result;
-    }
-
-    public static String favoritesFile()
-    {
-        String result = favoritesFolder() + File.separator + "favorites.xml";
-        createFile(result);
-        return result;
-    }*/
 
 	public static File favoritesFile()
 	{
