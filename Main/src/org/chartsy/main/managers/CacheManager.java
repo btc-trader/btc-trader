@@ -75,12 +75,19 @@ public class CacheManager
 	public void cacheStock(Stock stock, String fileName)
 		throws IOException
 	{
+        cacheStock(stock, fileName, false);
+    }
+
+	public void cacheStock(Stock stock, String fileName, boolean persist)
+		throws IOException
+	{
 		String folder = FileUtils.cacheStocksFolder();
 		File file = FileUtils.hashedCacheFile(folder, fileName);
 		if (!file.exists())
 		{
 			file.createNewFile();
-			file.deleteOnExit();
+            if ( !persist )
+                file.deleteOnExit();
 		}
 
 		Properties properties = new Properties();
@@ -120,7 +127,13 @@ public class CacheManager
 		return file.exists();
 	}
 
-	public void cacheDataset(Dataset dataset, String fileName)
+    public void cacheDataset(Dataset dataset, String fileName)
+		throws IOException
+    {
+        cacheDataset(dataset, fileName, false);
+    }
+
+	public void cacheDataset(Dataset dataset, String fileName, boolean persist)
 		throws IOException
 	{
 		String folder = FileUtils.cacheDatasetsFolder();
@@ -128,7 +141,8 @@ public class CacheManager
 		if (!file.exists())
 		{
 			file.createNewFile();
-			file.deleteOnExit();
+            if ( !persist )
+                file.deleteOnExit();
 		}
 
 		Properties properties = new Properties();
