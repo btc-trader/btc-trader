@@ -1,9 +1,12 @@
 package com.bitcoincharts;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,16 +44,18 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
         DAILY, WEEKLY, MONTHLY
     };
 
-    private final JSONParser parser;
+    private static final int HEARTBEAT_TIMEOUT = 10000; // ms
 
-    private HashMap<String,String> symbolMap = null;
-    private HashMap<String,Dataset> liveData = null;
-    private long liveSince = 0;
+    private final JSONParser parser;
+    private final HashMap<String,String> symbolMap;
+    private final HashMap<String,Long> lastTicks;
 
     public BitcoinChartsDataProvider()
     {
         super(NbBundle.getBundle(BitcoinChartsDataProvider.class), true, false);
-        this.parser = new JSONParser();
+        parser = new JSONParser();
+        symbolMap = new HashMap<String,String>();
+        lastTicks = new HashMap<String,Long>();
     }
 
     @Override
@@ -68,35 +73,30 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
     @Override
     public void initialize()
     {
-        synchronized (parser)
-        {
+        try {
+            BufferedReader rd = ProxyManager.getDefault().bufferReaderGET(getMarketsUrl());
+            JSONArray data = null;
             try {
-                BufferedReader rd = ProxyManager.getDefault().bufferReaderGET(getMarketsUrl());
-                JSONArray data = null;
-                try {
-                    data = (JSONArray)( parser.parse(rd) );
-                }
-                catch (org.json.simple.parser.ParseException e) {
-                    throw new IOException(e);
-                }
-                finally {
-                    rd.close();
-                }
-
-                symbolMap = new HashMap<String,String>();
-                liveData = new HashMap<String,Dataset>();
-
-                for ( ListIterator iter = data.listIterator(); iter.hasNext(); ) {
-                    JSONObject market = (JSONObject)( iter.next() );
-
-                    String symbol = (String)( market.get("symbol") );
-                    symbolMap.put( symbol.toUpperCase(), symbol );
-                    liveData.put( symbol.toUpperCase(), new Dataset() );
-                }
+                data = (JSONArray)( parser.parse(rd) );
             }
-            catch (IOException e) {
-                throw new RuntimeException(e);
+            catch (org.json.simple.parser.ParseException e) {
+                throw new IOException(e);
             }
+            finally {
+                rd.close();
+            }
+
+            for ( ListIterator iter = data.listIterator(); iter.hasNext(); ) {
+                JSONObject market = (JSONObject)( iter.next() );
+
+                String symbol = (String)( market.get("symbol") );
+                symbolMap.put( symbol.toUpperCase(), symbol );
+                lastTicks.put( symbol.toUpperCase(), Long.valueOf(0) );
+            }
+        }
+        catch (IOException e) {
+            // TODO log this
+            return;
         }
 
         Thread liveFeed = new Thread( this, BitcoinChartsDataProvider.class.getSimpleName() );
@@ -111,53 +111,77 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
 
         try {
             while (running) {
+                for ( String s : lastTicks.keySet() ) {
+                    lastTicks.put( s, Long.valueOf(0) );
+                }
+
                 Socket s = new Socket( getLiveFeedAddress(), getLiveFeedPort() );
                 BufferedReader rd = new BufferedReader( new InputStreamReader( s.getInputStream() ) );
+                BufferedWriter wr = new BufferedWriter( new OutputStreamWriter( s.getOutputStream() ) );
 
-                HashMap<String,Dataset> newLiveData = null;
-                long newLiveSince = 0;
+                s.setSoTimeout(HEARTBEAT_TIMEOUT);
 
                 try {
-                    String line = null;
-                    while ( (line = rd.readLine()) != null )
-                    {
-                        // Crop \0
-                        if ( line.charAt(0) == 0 )
-                            line = line.substring(1);
+                    wr.write("{\"action\":\"subscribe\",\"channel\":\"tick\"}\r\n");
+                    wr.flush();
 
-                        synchronized (parser)
+                    while (running) {
+                        String line;
+                        try {
+                            if ( ( line = rd.readLine() ) == null )
+                                break;
+                        }
+                        catch (SocketTimeoutException e) {
+                            wr.write("\r\n");
+                            wr.flush();
+                            continue;
+                        }
+
+                        JSONObject obj;
+                        try {
+                            obj = (JSONObject)( parser.parse(line) );
+                        }
+                        catch (org.json.simple.parser.ParseException e) {
+                            // TODO log this
+                            continue;
+                        }
+
+                        if ( !((String)obj.get("channel")).startsWith("tick") )
+                            continue;
+
+                        JSONObject tick = (JSONObject)obj.get("payload");
+                        String symbol = ((String)tick.get("symbol")).toUpperCase();
+                        long time = ((Number)tick.get("timestamp")).longValue();
+                        double price = ((Number)tick.get("price")).doubleValue();
+                        double volume = ((Number)tick.get("volume")).doubleValue();
+
+                        Stock stock = new Stock(symbol);
+                        stock.setCompanyName(symbol);
+
+                        synchronized ( (stock.toString() + "-" + ONE_MINUTE.getTimeParam()).intern() )
                         {
-                            JSONObject tick;
-                            try {
-                                tick = (JSONObject)( parser.parse(line) );
-                            }
-                            catch (org.json.simple.parser.ParseException e) {
-                                // TODO log this
+                            if ( lastTicks.get(symbol).longValue() > 1000*time )
                                 continue;
-                            }
 
-                            String symbol = (String)tick.get("symbol");
-                            long time = ((Number)tick.get("timestamp")).longValue();
-                            double price = ((Number)tick.get("price")).doubleValue();
-                            double volume = ((Number)tick.get("volume")).doubleValue();
+                            lastTicks.put( symbol, Long.valueOf(1000*time) );
 
-                            if ( newLiveData == null ) {
-                                newLiveSince = 1000 * ( time + 1 );
-                                newLiveData = new HashMap<String,Dataset>();
-                                for ( String k : liveData.keySet() ) {
-                                    newLiveData.put( k, new Dataset() );
+                            String minutesName = getDatasetKey(stock, ONE_MINUTE);
+                            if ( DatasetUsage.getInstance().isDatasetInMemory(minutesName) )
+                            {
+                                Dataset minutes = DatasetUsage.getInstance().getDatasetFromMemory(minutesName);
+
+                                long barTime = 1000 * ( time - time % ONE_MINUTE.getLengthInSeconds() );
+                                if ( barTime == minutes.getLastTime() ) {
+                                    DataItem bar = minutes.getLastDataItem();
+                                    if ( bar.getHigh() == 0 || bar.getHigh() < price ) bar.setHigh(price);
+                                    if ( bar.getLow() == 0 || bar.getLow() > price ) bar.setLow(price);
+                                    bar.setClose(price);
+                                    bar.setVolume(bar.getVolume() + volume);
+                                }
+                                else if ( barTime > minutes.getLastTime() ) {
+                                    minutes.addDataItem( new DataItem(barTime,price,price,price,price,volume) );
                                 }
                             }
-
-                            if ( 1000*time < newLiveSince )
-                                continue;
-
-                            if ( liveSince != newLiveSince ) {
-                                liveSince = newLiveSince;
-                                liveData = newLiveData;
-                            }
-
-                            liveData.get(symbol.toUpperCase()).addDataItem( new DataItem(1000*time,price,price,price,price,volume) );
                         }
                     }
                 }
@@ -207,76 +231,115 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
     protected Dataset fetchData(Stock stock, Interval interval)
             throws IOException, ParseException
     {
-        synchronized ( (stock.toString() + "-" + interval.getTimeParam()).intern() )
+        synchronized ( (stock.toString() + "-" + ONE_MINUTE.getTimeParam()).intern() )
         {
-            String fileName = getDatasetKey(stock, interval);
-            if ( !datasetExists(stock, interval) ) {
+            String minutesName = getDatasetKey(stock, ONE_MINUTE);
+            if ( !datasetExists(stock, ONE_MINUTE) ) {
                 fetchHistory(stock);
             }
-            if ( !DatasetUsage.getInstance().isDatasetInMemory(fileName) ) {
-                CacheManager.getInstance().fetchDatasetFromCache(fileName);
-            }
 
-            Dataset data = DatasetUsage.getInstance().getDatasetFromMemory(fileName);
-            if ( !interval.isIntraDay() )
-                return data;
+            CacheManager.getInstance().fetchDatasetFromCache(minutesName);
+            Dataset minutes = DatasetUsage.getInstance().getDatasetFromMemory(minutesName);
 
-            long newTime = data.getLastTime() + 1000 * interval.getLengthInSeconds();
-            if ( newTime > liveSince )
-                return data;
+            if ( symbolMap.containsKey(stock.getSymbol()) )
+            {
+                long newTime = minutes.getLastTime() + 1000 * ONE_MINUTE.getLengthInSeconds();
+                long lastTick = lastTicks.get(stock.getSymbol()).longValue();
 
-            String url = getHistoryUrl(stock.getSymbol(), newTime/1000);
-            List<DataItem> ticks = new ArrayList<DataItem>();
+                List<DataItem> ticks = new ArrayList<DataItem>();
+                String url = getHistoryUrl(stock.getSymbol(), newTime/1000);
+                BufferedReader rd = ProxyManager.getDefault().bufferReaderGET(url);
+                try {
+                    String inputLine;
+                    while ( (inputLine = rd.readLine()) != null ) {
+                        String[] values = inputLine.split(",");
 
-            BufferedReader rd = ProxyManager.getDefault().bufferReaderGET(url);
-            try {
-                String inputLine;
-                while ( (inputLine = rd.readLine()) != null )
+                        long time = Long.parseLong(values[0]);
+                        double price = Double.parseDouble(values[1]);
+                        double amount = Double.parseDouble(values[2]);
+
+                        if ( amount == 0 )
+                            continue;
+
+                        if ( 1000*time > lastTick && lastTick > 0 )
+                            break;
+
+                        ticks.add( new DataItem( 1000*time, price, price, price, price, amount ) );
+                    }
+                }
+                finally {
+                    rd.close();
+                }
+
+                if ( lastTick == 0 && !ticks.isEmpty() ) {
+                    lastTicks.put( stock.getSymbol(), ticks.get(ticks.size()-1).getTime() );
+                }
+
+                List<DataItem> bars = aggregateTicks(ticks,ONE_MINUTE);
+                if ( !bars.isEmpty() )
                 {
-                    String[] values = inputLine.split(",");
+                    if ( bars.size() > 1 ) {
+                        for ( DataItem b : bars.subList(0, bars.size()-1) ) {
+                            minutes.addDataItem(b);
+                        }
 
-                    long time = Long.parseLong(values[0]);
-                    double price = Double.parseDouble(values[1]);
-                    double amount = Double.parseDouble(values[2]);
+                        CacheManager.getInstance().cacheDataset( minutes, minutesName, true );
+                    }
 
-                    if ( amount == 0 )
-                        continue;
-
-                    if ( 1000*time > liveSince )
-                        break;
-
-                    ticks.add( new DataItem( 1000*time, price, price, price, price, amount ) );
+                    minutes.addDataItem( bars.get(bars.size()-1) );
                 }
             }
-            finally {
-                rd.close();
-            }
 
-            List<DataItem> bars = aggregateTicks(ticks,interval);
-            if ( !bars.isEmpty() ) bars = bars.subList(0, bars.size()-1);
-            for ( DataItem bar : bars ) {
-                data.addDataItem(bar);
-            }
+            if ( interval.equals(ONE_MINUTE) )
+                return minutes;
 
-            return data;
+            synchronized ( (stock.toString() + "-" + interval.getTimeParam()).intern() )
+            {
+                String dataName = getDatasetKey(stock, interval);
+
+                CacheManager.getInstance().fetchDatasetFromCache(dataName);
+                Dataset data = DatasetUsage.getInstance().getDatasetFromMemory(dataName);
+                long newTime = data.getLastTime() + 1000 * interval.getLengthInSeconds();
+
+                int idx;
+                for ( idx = minutes.getItemsCount(); idx > 0; idx-- ) {
+                    if ( minutes.getDataItem(idx-1).getTime() < newTime )
+                        break;
+                }
+
+                List<DataItem> bars = aggregateTicks(
+                        minutes.getDataItems().subList(idx, minutes.getItemsCount()),
+                        interval );
+
+                if ( !bars.isEmpty() )
+                {
+                    if ( bars.size() > 1 ) {
+                        for ( DataItem bar : bars.subList(0, bars.size()-1) ) {
+                            data.addDataItem(bar);
+                        }
+
+                        CacheManager.getInstance().cacheDataset( data, dataName, true );
+                    }
+
+                    minutes.addDataItem( bars.get(bars.size()-1) );
+                }
+
+                return data;
+            }
         }
     }
 
     private void fetchHistory(Stock stock)
             throws IOException, ParseException
     {
-        HashMap<Interval,ArrayList<DataItem>> history = new HashMap<Interval,ArrayList<DataItem>>();
-        for ( Interval i : SUPPORTED_INTERVALS ) {
-            history.put( i, new ArrayList<DataItem>() );
-        }
-
         String url = getHistoryUrl(stock.getSymbol(),0);
         BufferedReader rd = ProxyManager.getDefault().bufferReaderGET(url);
 
+        ArrayList<DataItem> minutes = new ArrayList<DataItem>();
+
         try {
             String inputLine;
-            while ( (inputLine = rd.readLine()) != null )
-            {
+            while ( (inputLine = rd.readLine()) != null ) {
                 String[] values = inputLine.split(",");
 
                 long time = Long.parseLong(values[0]);
@@ -286,18 +349,15 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
                 if ( amount == 0 )
                     continue;
 
-                for ( Interval i : SUPPORTED_INTERVALS ) {
-                    ArrayList<DataItem> data = history.get(i);
-                    DataItem last = data.isEmpty() ? null : data.get(data.size()-1);
-                    long lastTime = 1000 * ( time - time % i.getLengthInSeconds() );
-                    if ( last == null || last.getTime() < lastTime ) {
-                        data.add( new DataItem(lastTime, price, price, price, price, amount) );
-                    } else {
-                        if (last.getHigh() < price) last.setHigh(price);
-                        if (last.getLow() > price) last.setLow(price);
-                        last.setClose(price);
-                        last.setVolume(last.getVolume() + amount);
-                    }
+                DataItem last = minutes.isEmpty() ? null : minutes.get(minutes.size()-1);
+                long lastTime = 1000 * ( time - time % ONE_MINUTE.getLengthInSeconds() );
+                if ( last == null || last.getTime() < lastTime ) {
+                    minutes.add( new DataItem(lastTime, price, price, price, price, amount) );
+                } else {
+                    if (last.getHigh() < price) last.setHigh(price);
+                    if (last.getLow() > price) last.setLow(price);
+                    last.setClose(price);
+                    last.setVolume(last.getVolume() + amount);
                 }
             }
         }
@@ -306,15 +366,14 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
         }
 
         for ( Interval i : SUPPORTED_INTERVALS ) {
+            List<DataItem> data = aggregateTicks(minutes,i);
+
             synchronized ( (stock.toString() + "-" + i.getTimeParam()).intern() )
             {
                 String fileName = getDatasetKey(stock,i);
-                ArrayList<DataItem> data = history.get(i);
-                int count = data.size();
                 CacheManager.getInstance().cacheDataset(
-                        new Dataset( i.isIntraDay() ? data.subList(0, count-1) : data ),
-                        fileName,
-                        true );
+                        new Dataset(data.subList(0,data.size()-1)),
+                        fileName, true );
             }
         }
     }
@@ -322,45 +381,48 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
     @Override
     public List<DataItem> getLastDataItems(Stock stock, Interval interval)
     {
-        if ( !interval.isIntraDay() || liveSince == 0 )
-            return new ArrayList<DataItem>();
-
-        synchronized ( (stock.toString() + "-" + interval.getTimeParam()).intern() )
+        synchronized ( (stock.toString() + "-" + ONE_MINUTE.getTimeParam()).intern() )
         {
-            String fileName = getDatasetKey(stock, interval);
-            if ( !DatasetUsage.getInstance().isDatasetInMemory(fileName)
-                || DatasetUsage.getInstance().getDatasetFromMemory(fileName)
-                    .getLastTime() < liveSince - 1000 * interval.getLengthInSeconds() )
+            String minutesName = getDatasetKey(stock, ONE_MINUTE);
+            if ( !DatasetUsage.getInstance().isDatasetInMemory(minutesName) )
+                return new ArrayList<DataItem>(0);
+
+            Dataset minutes = DatasetUsage.getInstance().getDatasetFromMemory(minutesName);
+
+            if ( interval.equals(ONE_MINUTE) ) {
+                List<DataItem> result = new ArrayList<DataItem>();
+                result.add( minutes.getLastDataItem() );
+                return result;
+            }
+
+            synchronized ( (stock.toString() + "-" + interval.getTimeParam()).intern() )
             {
-                try {
-                    fetchData(stock, interval);
-                }
-                catch (IOException e) {
-                    // TODO log this
-                }
-                catch (ParseException e) {
-                    // TODO log this
-                }
-            }
+                String dataName = getDatasetKey(stock, interval);
+                Dataset data = DatasetUsage.getInstance().getDatasetFromMemory(dataName);
 
-            List<DataItem> newTicks = new ArrayList<DataItem>();
-            synchronized (parser)
-            {
-                newTicks = liveData.get(stock.getSymbol()).getDataItems();
-                liveData.put( stock.getSymbol(), new Dataset() );
-            }
-
-            List<DataItem> result = new ArrayList<DataItem>();
-            for ( Interval i : SUPPORTED_INTERVALS ) {
-                List<DataItem> bars = aggregateTicks( newTicks, i );
-                synchronized ( (stock.toString() + "-" + i.getTimeParam()).intern() ) {
-                    updateIntraDay( getDatasetKey(stock,i), bars );
+                int idx;
+                for ( idx = minutes.getItemsCount(); idx > 0; idx-- ) {
+                    if ( minutes.getDataItem(idx-1).getTime() < data.getLastTime() )
+                        break;
                 }
-                if ( interval.equals(i) )
-                    result = bars;
-            }
 
-            return result;
+                List<DataItem> bars = aggregateTicks(
+                        minutes.getDataItems().subList(idx, minutes.getItemsCount()),
+                        interval );
+
+                if ( bars.size() == 1 && bars.get(0).equals(data.getLastDataItem()) )
+                    return new ArrayList<DataItem>(0);
+
+                if ( !bars.isEmpty() ) {
+                    data.getDataItems().set( data.getItemsCount()-1, bars.get(0) );
+
+                    for ( DataItem bar : bars.subList(1, bars.size()) ) {
+                        data.addDataItem(bar);
+                    }
+                }
+
+                return bars;
+            }
         }
     }
 
@@ -390,44 +452,7 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
     @Override
     public boolean updateIntraDay( String key, List<DataItem> bars )
     {
-        if ( bars.isEmpty() )
-            return false;
-
-        // FIXME Buggy
-        if ( !DatasetUsage.getInstance().isDatasetInMemory(key) ) {
-            try {
-                CacheManager.getInstance().fetchDatasetFromCache(key);
-            }
-            catch (IOException e) {
-                return false;
-            }
-        }
-
-        Dataset ds = DatasetUsage.getInstance().getDatasetFromMemory(key);
-        DataItem firstUpdated = bars.get(0);
-
-        int idx;
-        for ( idx = ds.getItemsCount(); idx > 0; idx-- ) {
-            if ( ds.getDataItem(idx-1).getTime() < firstUpdated.getTime() )
-                break;
-        }
-
-        for ( DataItem di : bars ) {
-            DataItem dj;
-            if ( idx < ds.getItemsCount() ) {
-                dj = ds.getDataItem(idx);
-                if ( di.getHigh() > dj.getHigh() ) dj.setHigh(di.getHigh());
-                if ( di.getLow() < dj.getLow() ) dj.setLow(di.getLow());
-                dj.setClose(di.getClose());
-                dj.setVolume(dj.getVolume() + di.getVolume());
-            } else {
-                dj = di;
-                ds.addDataItem(dj);
-            }
-            idx++;
-        }
-
-        return true;
+        return !bars.isEmpty();
     }
 
     @Override
@@ -442,7 +467,8 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
     }
 
     private String getHistoryUrl(String symbol) {
-        return "http://bitcoincharts.com/t/trades.csv?symbol=" + symbolMap.get(symbol);
+        String s = symbolMap.get(symbol);
+        return ( s == null ) ? null : "http://bitcoincharts.com/t/trades.csv?symbol=" + s;
     }
 
     private String getHistoryUrl(String symbol, long start) {
@@ -459,6 +485,6 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
     }
 
     private int getLiveFeedPort() {
-        return 27007;
+        return 8002;
     }
 }
