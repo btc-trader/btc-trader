@@ -488,9 +488,8 @@ public class ChartData implements Serializable, ChartFrameListener
 
 	public double[] getYValues(Rectangle rectangle, Range range, int fontHeight)
 	{
-		int count = 15;
-		while (((rectangle.height / count) < (fontHeight + 20)) && (count > -2))
-			count--;
+                int count = (int)Math.floor( rectangle.height / (fontHeight + 20) );
+                if ( count > 15 ) count = 15;
 
 		double rangeMin = range.getLowerBound();
 		double rangeMax = range.getUpperBound();
@@ -506,7 +505,7 @@ public class ChartData implements Serializable, ChartFrameListener
 		if (rangeUnit < 0.001)
 		{
 			rangeUnit = 0.001d;
-		} else if (rangeUnit >= 0.001 && rangeUnit < 0.005)
+		} else if (rangeUnit >= 0.001 && rangeUnit < 0.05)
 		{
 			String unitStr = D1.format(rangeUnit);
 			try
@@ -515,7 +514,7 @@ public class ChartData implements Serializable, ChartFrameListener
 			} catch (ParseException ex)
 			{
 			}
-		} else if (rangeUnit >= 0.005 && rangeUnit < 1)
+		} else if (rangeUnit >= 0.05 && rangeUnit < 1)
 		{
 			String unitStr = D2.format(rangeUnit);
 			try
@@ -529,7 +528,7 @@ public class ChartData implements Serializable, ChartFrameListener
 		rangeMin = (int)(rangeMin / rangeUnit) * rangeUnit;
 		count = (int)(vRange / rangeUnit);
 
-		if (count + 2 > 0)
+		if (count > 0)
 		{
 			double[] result = new double[count + 2];
 			for (int i = 0; i < count + 2; i++)
