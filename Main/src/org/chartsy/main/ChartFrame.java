@@ -48,7 +48,6 @@ import org.openide.DialogDisplayer;
 import org.openide.NotifyDescriptor;
 import org.openide.nodes.AbstractNode;
 import org.openide.util.NbBundle;
-import org.openide.util.NbPreferences;
 import org.openide.util.RequestProcessor;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
@@ -625,7 +624,11 @@ public class ChartFrame extends TopComponent
 						chartToolbar.updateToolbar();
 						mainPanel.setVisible(true);
 						scrollBar.setVisible(true);
-					} else
+
+                                                // HACK restore layout of the 'mainPanel'
+                                                // after 'loading' label is removed
+                                                add( mainPanel, BorderLayout.CENTER );
+                                        } else
 					{
 						initComponents();
 					}
