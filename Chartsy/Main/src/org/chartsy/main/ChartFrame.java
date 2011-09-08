@@ -631,7 +631,11 @@ public class ChartFrame extends TopComponent
 						chartToolbar.updateToolbar();
 						mainPanel.setVisible(true);
 						scrollBar.setVisible(true);
-					} else
+
+                                                // HACK restore layout of the 'mainPanel'
+                                                // after 'loading' label is removed
+                                                add( mainPanel, BorderLayout.CENTER );
+                                        } else
 					{
 						initComponents();
 					}
