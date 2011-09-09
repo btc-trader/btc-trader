@@ -504,18 +504,22 @@ public class ChartFrame extends TopComponent
 	@Override
     public void adjustmentValueChanged(AdjustmentEvent e)
     {
-        int items = getChartData().getPeriod();
-        int itemsCount = getChartData().getDataset().getItemsCount();
-        int end = e.getValue() + items;
-
-        end = end > itemsCount ? itemsCount : (end < items ? items : end);
-
-        if (getChartData().getLast() != end)
+        if (!getChartData().isDatasetNull())
         {
-            getChartData().setLast(end);
-            getChartData().calculate(this);
+            int items = getChartData().getPeriod();
+            int itemsCount = getChartData().getDataset().getItemsCount();
+            int end = e.getValue() + items;
+
+            end = end > itemsCount ? itemsCount : (end < items ? items : end);
+
+            if (getChartData().getLast() != end)
+            {
+                getChartData().setLast(end);
+                getChartData().calculate(this);
+            }
+
+            repaint();
         }
-		repaint();
     }
 
 	@Override
