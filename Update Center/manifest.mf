@@ -3,5 +3,5 @@ OpenIDE-Module: org.btctrader.updatecenter
 OpenIDE-Module-Install: org/btctrader/updatecenter/Installer.class
 OpenIDE-Module-Layer: org/btctrader/updatecenter/layer.xml
 OpenIDE-Module-Localizing-Bundle: org/btctrader/updatecenter/Bundle.properties
-OpenIDE-Module-Specification-Version: 1.4.1.0
+OpenIDE-Module-Specification-Version: 1.4.2
 

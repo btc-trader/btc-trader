@@ -63,7 +63,7 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
     @Override
     public int getRefreshInterval()
     {
-        return 1;
+        return 3;
     }
 
     @Override
