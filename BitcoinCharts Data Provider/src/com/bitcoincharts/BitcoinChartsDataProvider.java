@@ -49,6 +49,7 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
     private final JSONParser parser;
     private final HashMap<String,String> symbolMap;
     private final HashMap<String,Long> lastTicks;
+    private final HashMap<String,Long> cachedTill;
 
     public BitcoinChartsDataProvider()
     {
@@ -56,6 +57,7 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
         parser = new JSONParser();
         symbolMap = new HashMap<String,String>();
         lastTicks = new HashMap<String,Long>();
+        cachedTill = new HashMap<String,Long>();
     }
 
     @Override
@@ -233,61 +235,92 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
     {
         synchronized ( (stock.toString() + "-" + ONE_MINUTE.getTimeParam()).intern() )
         {
+            if ( !symbolMap.containsKey(stock.getSymbol()) )
+                return null;
+
             String minutesName = getDatasetKey(stock, ONE_MINUTE);
             if ( !datasetExists(stock, ONE_MINUTE) ) {
                 fetchHistory(stock);
             }
 
-            CacheManager.getInstance().fetchDatasetFromCache(minutesName);
             Dataset minutes = DatasetUsage.getInstance().getDatasetFromMemory(minutesName);
+            long fetchTill = lastTicks.get(stock.getSymbol()).longValue();
+            long fetchSince;
+            if ( minutes == null ) {
+                CacheManager.getInstance().fetchDatasetFromCache(minutesName);
+                DatasetUsage.getInstance().fetchDataset(minutesName);
+                minutes = DatasetUsage.getInstance().getDatasetFromMemory(minutesName);
+                fetchSince = minutes.getLastTime() + 1000 * ONE_MINUTE.getLengthInSeconds();
+                cachedTill.put( minutesName, Long.valueOf(fetchSince) );
+            } else {
+                fetchSince = cachedTill.get(minutesName).longValue();
+            }
 
-            if ( symbolMap.containsKey(stock.getSymbol()) )
+            List<DataItem> ticks = new ArrayList<DataItem>();
+            String url = getHistoryUrl(stock.getSymbol(), fetchSince/1000);
+            BufferedReader rd = ProxyManager.getDefault().bufferReaderGET(url);
+            try {
+                String inputLine;
+                while ( (inputLine = rd.readLine()) != null ) {
+                    String[] values = inputLine.split(",");
+
+                    long time = Long.parseLong(values[0]);
+                    double price = Double.parseDouble(values[1]);
+                    double amount = Double.parseDouble(values[2]);
+
+                    if ( amount == 0 )
+                        continue;
+
+                    if ( 1000*time > fetchTill && fetchTill > 0 )
+                        break;
+
+                    ticks.add( new DataItem( 1000*time, price, price, price, price, amount ) );
+                }
+            }
+            finally {
+                rd.close();
+            }
+
+            if ( fetchTill == 0 && !ticks.isEmpty() ) {
+                lastTicks.put( stock.getSymbol(), ticks.get(ticks.size()-1).getTime() );
+            }
+
+            List<DataItem> bars = aggregateTicks(ticks,ONE_MINUTE);
+            if ( !bars.isEmpty() )
             {
-                long newTime = minutes.getLastTime() + 1000 * ONE_MINUTE.getLengthInSeconds();
-                long lastTick = lastTicks.get(stock.getSymbol()).longValue();
-
-                List<DataItem> ticks = new ArrayList<DataItem>();
-                String url = getHistoryUrl(stock.getSymbol(), newTime/1000);
-                BufferedReader rd = ProxyManager.getDefault().bufferReaderGET(url);
-                try {
-                    String inputLine;
-                    while ( (inputLine = rd.readLine()) != null ) {
-                        String[] values = inputLine.split(",");
-
-                        long time = Long.parseLong(values[0]);
-                        double price = Double.parseDouble(values[1]);
-                        double amount = Double.parseDouble(values[2]);
-
-                        if ( amount == 0 )
-                            continue;
-
-                        if ( 1000*time > lastTick && lastTick > 0 )
-                            break;
-
-                        ticks.add( new DataItem( 1000*time, price, price, price, price, amount ) );
-                    }
-                }
-                finally {
-                    rd.close();
+                int idx = minutes.getItemsCount();
+                for ( ; idx > 0; idx-- ) {
+                    if ( minutes.getTimeAt(idx-1) < fetchSince )
+                        break;
                 }
 
-                if ( lastTick == 0 && !ticks.isEmpty() ) {
-                    lastTicks.put( stock.getSymbol(), ticks.get(ticks.size()-1).getTime() );
-                }
-
-                List<DataItem> bars = aggregateTicks(ticks,ONE_MINUTE);
-                if ( !bars.isEmpty() )
+                if ( bars.size() > 1 )
                 {
-                    if ( bars.size() > 1 ) {
-                        for ( DataItem b : bars.subList(0, bars.size()-1) ) {
+                    for ( DataItem b : bars.subList(0, bars.size()-1) ) {
+                        if ( idx > minutes.getLastIndex() ) {
                             minutes.addDataItem(b);
+                        } else {
+                            DataItem i = minutes.getDataItem(idx);
+                            i.setTime( b.getTime() );
+                            i.setOpen( b.getOpen() );
+                            i.setHigh( b.getHigh() );
+                            i.setLow ( b.getLow()  );
+                            i.setClose( b.getClose() );
+                            i.setVolume( b.getVolume() );
                         }
-
-                        CacheManager.getInstance().cacheDataset( minutes, minutesName, true );
+                        idx++;
                     }
 
-                    minutes.addDataItem( bars.get(bars.size()-1) );
+                    Dataset cached = new Dataset( minutes.getDataItems().subList(0, idx) );
+                    CacheManager.getInstance().cacheDataset( cached, minutesName, true );
+
+                    long newCachedTill = cached.getLastTime() + 1000 * ONE_MINUTE.getLengthInSeconds();
+                    cachedTill.put( minutesName, newCachedTill );
                 }
+
+                DataItem b = bars.get(bars.size()-1);
+                if ( minutes.getLastTime() < b.getTime() )
+                    minutes.addDataItem(b);
             }
 
             if ( interval.equals(ONE_MINUTE) )
@@ -296,32 +329,61 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
             synchronized ( (stock.toString() + "-" + interval.getTimeParam()).intern() )
             {
                 String dataName = getDatasetKey(stock, interval);
-
-                CacheManager.getInstance().fetchDatasetFromCache(dataName);
                 Dataset data = DatasetUsage.getInstance().getDatasetFromMemory(dataName);
-                long newTime = data.getLastTime() + 1000 * interval.getLengthInSeconds();
+                if ( data == null ) {
+                    CacheManager.getInstance().fetchDatasetFromCache(dataName);
+                    data = DatasetUsage.getInstance().getDatasetFromMemory(dataName);
+                    fetchSince = data.getLastTime() + 1000 * interval.getLengthInSeconds();
+                    cachedTill.put( dataName, Long.valueOf(fetchSince) );
+                } else {
+                    fetchSince = cachedTill.get(dataName).longValue();
+                }
 
-                int idx;
-                for ( idx = minutes.getItemsCount(); idx > 0; idx-- ) {
-                    if ( minutes.getDataItem(idx-1).getTime() < newTime )
+                int idx = minutes.getItemsCount();
+                for ( ; idx > 0; idx-- ) {
+                    if ( minutes.getDataItem(idx-1).getTime() < fetchSince )
                         break;
                 }
 
-                List<DataItem> bars = aggregateTicks(
+                bars = aggregateTicks(
                         minutes.getDataItems().subList(idx, minutes.getItemsCount()),
                         interval );
 
                 if ( !bars.isEmpty() )
                 {
-                    if ( bars.size() > 1 ) {
-                        for ( DataItem bar : bars.subList(0, bars.size()-1) ) {
-                            data.addDataItem(bar);
-                        }
-
-                        CacheManager.getInstance().cacheDataset( data, dataName, true );
+                    idx = data.getItemsCount();
+                    for ( ; idx > 0; idx-- ) {
+                        if ( data.getDataItem(idx-1).getTime() < fetchSince )
+                            break;
                     }
 
-                    minutes.addDataItem( bars.get(bars.size()-1) );
+                    if ( bars.size() > 1 )
+                    {
+                        for ( DataItem b : bars.subList(0, bars.size()-1) ) {
+                            if ( idx > data.getLastIndex() ) {
+                                data.addDataItem(b);
+                            } else {
+                                DataItem i = data.getDataItem(idx);
+                                i.setTime( b.getTime() );
+                                i.setOpen( b.getOpen() );
+                                i.setHigh( b.getHigh() );
+                                i.setLow ( b.getLow()  );
+                                i.setClose( b.getClose() );
+                                i.setVolume( b.getVolume() );
+                            }
+                            idx++;
+                        }
+
+                        Dataset cached = new Dataset( data.getDataItems().subList(0, idx) );
+                        CacheManager.getInstance().cacheDataset( cached, dataName, true );
+
+                        long newCachedTill = cached.getLastTime() + 1000 * interval.getLengthInSeconds();
+                        cachedTill.put( dataName, newCachedTill );
+                    }
+
+                    DataItem b = bars.get(bars.size()-1);
+                    if ( data.getLastTime() < b.getTime() )
+                        data.addDataItem(b);
                 }
 
                 return data;
@@ -376,6 +438,16 @@ public final class BitcoinChartsDataProvider extends DataProvider implements Run
                         fileName, true );
             }
         }
+    }
+
+    @Override
+    public DataItem getLastDataItem(Stock stock, Interval interval)
+    {
+        List<DataItem> lastItems = getLastDataItems(stock, interval);
+        if ( lastItems == null || lastItems.isEmpty() )
+            return null;
+
+        return lastItems.get(lastItems.size()-1);
     }
 
     @Override
