@@ -69,7 +69,7 @@ public class Template
 		ArrayList<Overlay> list = new ArrayList<Overlay>();
 		for (int i = 0; i < overlays.size(); i++)
 		{
-			Overlay instance = TemplateManager.getDefault().getOverlay(i);
+			Overlay instance = TemplateManager.getDefault().getOverlay(name, i);
 			list.add(instance);
 		}
 		return list;
@@ -85,9 +85,9 @@ public class Template
 	public ArrayList<Indicator> getIndicators()
 	{
 		ArrayList<Indicator> list = new ArrayList<Indicator>();
-		for (Indicator indicator : indicators)
+		for (int i = 0; i < indicators.size(); i++)
 		{
-			Indicator instance = indicator.newInstance();
+			Indicator instance = TemplateManager.getDefault().getIndicator(name, i);
 			list.add(instance);
 		}
 		return list;

@@ -211,6 +211,9 @@ public class TemplateManager
     }
 
     public Overlay getOverlay(int index)
+    { return getOverlay(defTemp, index); }
+
+    public Overlay getOverlay(String tempName, int index)
     {
         Overlay overlay = null;
         Document document = XMLUtil.loadXMLDocument(templatesXML);
@@ -220,7 +223,7 @@ public class TemplateManager
         for (int i = 0; i < nodeList.getLength(); i++)
         {
             Element element = (Element) nodeList.item(i);
-            if (element.getAttribute(XMLUtil.NAME_ATTR).equals(defTemp))
+            if (element.getAttribute(XMLUtil.NAME_ATTR).equals(tempName))
             {
                 Element overlays = XMLUtil.getOverlaysNode(element);
                 NodeList overlaysList = overlays.getElementsByTagName(XMLUtil.OVERLAY_NODE);
@@ -236,6 +239,9 @@ public class TemplateManager
     }
 
     public Indicator getIndicator(int index)
+    { return getIndicator(defTemp, index); }
+
+    public Indicator getIndicator(String tempName, int index)
     {
         Indicator indicator = null;
         Document document = XMLUtil.loadXMLDocument(templatesXML);
@@ -245,7 +251,7 @@ public class TemplateManager
         for (int i = 0; i < nodeList.getLength(); i++)
         {
             Element element = (Element) nodeList.item(i);
-            if (element.getAttribute(XMLUtil.NAME_ATTR).equals(defTemp))
+            if (element.getAttribute(XMLUtil.NAME_ATTR).equals(tempName))
             {
                 Element indicators = XMLUtil.getIndicatorsNode(element);
                 NodeList indicatorsList = indicators.getElementsByTagName(XMLUtil.INDICATOR_NODE);
