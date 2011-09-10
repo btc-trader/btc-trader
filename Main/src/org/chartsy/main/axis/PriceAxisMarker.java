@@ -25,7 +25,7 @@ public class PriceAxisMarker
         DecimalFormat df = new DecimalFormat("#,##0.00");
         if (value < 10f)
         {
-            df = new DecimalFormat("#,##0.00000");
+            df = new DecimalFormat("#,##0.0000");
         }
         RectangleInsets dataOffset = ChartData.dataOffset;
         FontMetrics fm = g.getFontMetrics();
