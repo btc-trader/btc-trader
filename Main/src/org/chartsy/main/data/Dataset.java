@@ -562,6 +562,120 @@ public class Dataset implements Serializable
         return 0;
     }
 
+    public double getAverageNotZero(int price) {
+        List<DataItem> list = getDataItems();
+        double avg = 0;
+        int count = 0;
+
+        switch (price)
+        {
+            case OPEN_PRICE:
+                for (DataItem item : list) {
+                    if ( item != null && item.getOpen() != 0 ) {
+                        avg += item.getOpen();
+                        count++;
+                    }
+                }
+                break;
+
+            case HIGH_PRICE:
+                for (DataItem item : list) {
+                    if ( item != null && item.getHigh() != 0 ) {
+                        avg += item.getHigh();
+                        count++;
+                    }
+                }
+                break;
+
+            case LOW_PRICE:
+                for (DataItem item : list) {
+                    if ( item != null && item.getLow() != 0 ) {
+                        avg += item.getLow();
+                        count++;
+                    }
+                }
+                break;
+
+            case CLOSE_PRICE:
+                for (DataItem item : list) {
+                    if ( item != null && item.getClose() != 0 ) {
+                        avg += item.getClose();
+                        count++;
+                    }
+                }
+                break;
+
+            default:
+                throw new UnsupportedOperationException("Not yet implemented");
+        }
+
+        if ( count > 0 )
+            avg /= count;
+
+        return avg;
+    }
+
+    public double getVarianceNotZero(int price) {
+        List<DataItem> list = getDataItems();
+        double avg = 0;
+        double var = 0;
+        int count = 0;
+
+        switch (price)
+        {
+            case OPEN_PRICE:
+                for (DataItem item : list) {
+                    if ( item != null && item.getOpen() != 0 ) {
+                        avg += item.getOpen();
+                        var += item.getOpen() * item.getOpen();
+                        count++;
+                    }
+                }
+                break;
+
+            case HIGH_PRICE:
+                for (DataItem item : list) {
+                    if ( item != null && item.getHigh() != 0 ) {
+                        avg += item.getHigh();
+                        var += item.getHigh() * item.getHigh();
+                        count++;
+                    }
+                }
+                break;
+
+            case LOW_PRICE:
+                for (DataItem item : list) {
+                    if ( item != null && item.getLow() != 0 ) {
+                        avg += item.getLow();
+                        var += item.getLow() * item.getLow();
+                        count++;
+                    }
+                }
+                break;
+
+            case CLOSE_PRICE:
+                for (DataItem item : list) {
+                    if ( item != null && item.getClose() != 0 ) {
+                        avg += item.getClose();
+                        var += item.getClose() * item.getClose();
+                        count++;
+                    }
+                }
+                break;
+
+            default:
+                throw new UnsupportedOperationException("Not yet implemented");
+        }
+
+        if ( count > 0 ) {
+            avg /= count;
+            var /= count;
+            var -= avg * avg;
+        }
+
+        return var;
+    }
+
     public List<DataItem> getVisibleItems(int period, int end)
     {
         List<DataItem> list = new ArrayList<DataItem>();

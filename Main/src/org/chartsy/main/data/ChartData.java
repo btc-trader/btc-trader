@@ -288,8 +288,29 @@ public class ChartData implements Serializable, ChartFrameListener
         Range range = new Range();
         if (!isVisibleNull())
         {
-            double min = getVisible().getMinNotZero();
-            double max = getVisible().getMaxNotZero();
+            double hBound = getVisible().getAverageNotZero(Dataset.CLOSE_PRICE)
+                    + 3 * Math.sqrt( getVisible().getVarianceNotZero(Dataset.CLOSE_PRICE) );
+
+            double lBound = getVisible().getAverageNotZero(Dataset.CLOSE_PRICE)
+                    - 3 * Math.sqrt( getVisible().getVarianceNotZero(Dataset.CLOSE_PRICE) );
+
+            double min = Double.MAX_VALUE;
+            double max = Double.MIN_VALUE;
+            for ( DataItem item : getVisible().getDataItems() ) {
+                if ( item != null && item.getHigh() != 0 && max < item.getHigh() && item.getHigh() < hBound ) {
+                    max = item.getHigh();
+                }
+                if ( item != null && item.getLow() != 0 && min > item.getLow() && item.getLow() > lBound ) {
+                    min = item.getLow();
+                }
+            }
+
+            if ( getVisible().getLastClose() < min )
+                min = getVisible().getLastClose();
+
+            if ( getVisible().getLastClose() > max )
+                max = getVisible().getLastClose();
+
             range = new Range(min - (max - min) * 0.01, max + (max - min) * 0.01);
 			
 			for (int i = 0; i < overlays.size(); i++)
@@ -308,6 +329,7 @@ public class ChartData implements Serializable, ChartFrameListener
 				}
 			}
         }
+
         setVisibleRange(range);
     }
 
